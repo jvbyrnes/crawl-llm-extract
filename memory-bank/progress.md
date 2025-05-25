@@ -52,3 +52,27 @@ This file tracks the project's progress using a task list format.
   - Added transparent relevance scoring system
   - Preserved backward compatibility
   - Integrated seamlessly with existing LLM configuration
+## Completed Tasks (2025-05-25 20:58:00)
+
+* **MAJOR FEATURE ENHANCEMENT**: Binary URL Filtering System
+  - **Phase 1**: Updated URLFilter class for binary decisions
+    - Removed relevancy scoring logic and threshold parameters
+    - Implemented direct include/exclude LLM prompts
+    - Updated response parsing for binary decisions
+    - Changed metadata structure from scores to boolean flags
+  
+  - **Phase 2**: Updated ApiDocCrawler integration
+    - Removed relevance threshold parameters from all methods
+    - Updated result handling for binary decision metadata
+    - Modified save functionality for new decision format
+  
+  - **Phase 3**: Updated command-line interface
+    - Removed `--relevance-threshold` argument
+    - Simplified main function signature
+    - Updated documentation and help text
+
+* **Architecture Simplification**:
+  - Eliminated complex threshold configuration
+  - Streamlined user experience with binary decisions
+  - Maintained decision transparency through explanations
+  - Reduced API complexity while preserving functionality

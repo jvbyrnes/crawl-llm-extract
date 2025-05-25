@@ -42,13 +42,12 @@ class ApiDocCrawler:
         self.llm_parser = LLMParser(self.llm_config)
         self.url_filter = URLFilter(self.filter_llm_config, target_topic)
     
-    async def crawl_and_parse(self, url: str, relevance_threshold: float = 0.7) -> List[Dict[str, Any]]:
+    async def crawl_and_parse(self, url: str) -> List[Dict[str, Any]]:
         """
-        Crawl the API documentation, filter for relevance, and parse the content.
+        Crawl the API documentation, filter for inclusion, and parse the content.
         
         Args:
             url: URL of the API documentation
-            relevance_threshold: Minimum relevance score (0.0-1.0) to include page
             
         Returns:
             Processed results
@@ -63,20 +62,18 @@ class ApiDocCrawler:
         
         print(f"Found {len(crawler_results)} pages.")
         
-        # Filter results for relevance if target topic is specified
+        # Filter results for inclusion if target topic is specified
         if self.target_topic:
-            print(f"Filtering for relevance to: {self.target_topic}")
-            crawler_results = await self.url_filter.filter_crawled_results(
-                crawler_results, relevance_threshold
-            )
+            print(f"Filtering for inclusion based on: {self.target_topic}")
+            crawler_results = await self.url_filter.filter_crawled_results(crawler_results)
             
             if not crawler_results:
-                print("No relevant pages found after filtering.")
+                print("No pages included after filtering.")
                 return []
             
-            print(f"After filtering: {len(crawler_results)} relevant pages.")
+            print(f"After filtering: {len(crawler_results)} included pages.")
         else:
-            print("No target topic specified, skipping relevance filtering.")
+            print("No target topic specified, skipping inclusion filtering.")
         
         # Parse each filtered result
         parsed_results = []
@@ -93,10 +90,10 @@ class ApiDocCrawler:
                     'content': parsed_content
                 }
                 
-                # Include relevance metadata if available
-                if 'relevance_score' in result:
-                    parsed_result['relevance_score'] = result['relevance_score']
-                    parsed_result['relevance_explanation'] = result['relevance_explanation']
+                # Include decision metadata if available
+                if 'included' in result:
+                    parsed_result['included'] = result['included']
+                    parsed_result['decision_explanation'] = result['decision_explanation']
                 
                 parsed_results.append(parsed_result)
                 
@@ -106,25 +103,22 @@ class ApiDocCrawler:
         
         return parsed_results
     
-    async def crawl_only(self, url: str, relevance_threshold: float = 0.7) -> List[Dict[str, Any]]:
+    async def crawl_only(self, url: str) -> List[Dict[str, Any]]:
         """
         Only crawl the API documentation without parsing, with optional filtering.
         
         Args:
             url: URL of the API documentation
-            relevance_threshold: Minimum relevance score (0.0-1.0) to include page
             
         Returns:
             Crawled results (filtered if target topic is specified)
         """
         crawler_results = await self.deep_crawler.crawl(url)
         
-        # Filter results for relevance if target topic is specified
+        # Filter results for inclusion if target topic is specified
         if self.target_topic and crawler_results:
-            print(f"Filtering crawled results for relevance to: {self.target_topic}")
-            crawler_results = await self.url_filter.filter_crawled_results(
-                crawler_results, relevance_threshold
-            )
+            print(f"Filtering crawled results for inclusion based on: {self.target_topic}")
+            crawler_results = await self.url_filter.filter_crawled_results(crawler_results)
         
         return crawler_results
     
@@ -184,7 +178,7 @@ class ApiDocCrawler:
                 with open(md_path, 'w', encoding='utf-8') as f:
                     f.write("\n".join(result['content']))
             
-            # Save the metadata as JSON (including relevance info if available)
+            # Save the metadata as JSON (including decision info if available)
             meta = {k: v for k, v in result.items() if k != 'content'}
             json_path = os.path.join(output_dir, f"{filename_base}_meta.json")
             with open(json_path, 'w', encoding='utf-8') as f:
@@ -202,10 +196,10 @@ class ApiDocCrawler:
                         'depth': r.get('depth', 0),
                         'filename': f"page_{i+1}.md"
                     }
-                    # Include relevance info if available
-                    if 'relevance_score' in r:
-                        entry['relevance_score'] = r['relevance_score']
-                        entry['relevance_explanation'] = r.get('relevance_explanation', '')
+                    # Include decision info if available
+                    if 'included' in r:
+                        entry['included'] = r['included']
+                        entry['decision_explanation'] = r.get('decision_explanation', '')
                     index.append(entry)
             json.dump(index, f, indent=2)
         

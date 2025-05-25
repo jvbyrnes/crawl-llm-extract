@@ -189,3 +189,63 @@ This file records architectural and implementation decisions using a list format
 * **Automatic Detection**: No manual configuration needed for different model types
 * **Backward Compatible**: Existing configurations continue to work
 * **Error Prevention**: Clear handling of model-specific API requirements
+## Binary URL Filtering Implementation (2025-05-25 20:57:00)
+
+* Implemented direct binary include/exclude decisions replacing relevancy scoring system
+
+## Rationale
+
+* User requested simplification from relevancy scores (0.0-1.0) to binary include/exclude decisions
+* Binary decisions are more intuitive and eliminate arbitrary threshold configuration
+* Simpler LLM prompts may be more reliable and cost-effective than precise scoring
+* Maintains transparency through decision explanations while reducing complexity
+
+## Implementation Details
+
+* **Updated URLFilter class** (`src/url_filter.py`):
+  - Removed `relevance_threshold` parameter from `filter_crawled_results()`
+  - Renamed `_analyze_page_relevance()` to `_analyze_page_inclusion()` returning `(bool, str)`
+  - Updated LLM prompt to request binary "include"/"exclude" decisions
+  - Replaced `relevance_score` metadata with `included` boolean
+  - Renamed `relevance_explanation` to `decision_explanation`
+  - Simplified response parsing for binary decisions
+
+* **Updated ApiDocCrawler class** (`src/api_doc_crawler.py`):
+  - Removed `relevance_threshold` parameters from `crawl_and_parse()` and `crawl_only()`
+  - Updated method signatures and documentation
+  - Modified result handling for binary decision metadata
+  - Updated save functionality to reflect new decision format
+
+* **Updated command-line interface** (`src/main.py`):
+  - Removed `--relevance-threshold` command-line argument
+  - Updated main function signature and documentation
+  - Simplified help text to reflect binary filtering approach
+
+## New LLM Prompt Structure
+
+```
+Analyze this web page and decide whether to INCLUDE or EXCLUDE it for the target topic: "{target_topic}"
+
+Make a binary decision based on relevance to the target topic.
+
+Respond in this exact JSON format:
+{
+    "decision": "include",
+    "explanation": "Brief explanation of why this page should be included or excluded"
+}
+```
+
+## Benefits Achieved
+
+* **Simplified Decision Making**: No threshold configuration required
+* **Clearer User Experience**: Binary include/exclude more intuitive than numeric scores
+* **Reduced Complexity**: Eliminated scoring logic and threshold management
+* **Maintained Transparency**: Still provides explanations for decisions
+* **Cost Efficiency**: Simpler prompts may reduce token usage
+
+## Breaking Changes
+
+* `--relevance-threshold` command-line argument removed
+* `relevance_threshold` parameter removed from API methods
+* Result metadata structure changed from scores to boolean decisions
+* Migration: Users should remove threshold parameters from existing scripts

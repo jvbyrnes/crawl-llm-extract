@@ -1,8 +1,8 @@
 """
-URL Filter module for intelligent content relevance filtering.
+URL Filter module for intelligent content inclusion filtering.
 
 This module implements LLM-based filtering to evaluate crawled content
-and determine which pages are most relevant to the target documentation goal.
+and make binary include/exclude decisions for the target documentation goal.
 """
 
 import asyncio
@@ -15,8 +15,8 @@ from .config import LLMConfig, FilterLLMConfig
 
 class URLFilter:
     """
-    LLM-based filter that evaluates crawled content for relevance
-    to a specific documentation target before expensive parsing.
+    LLM-based filter that evaluates crawled content and makes binary
+    include/exclude decisions for a specific documentation target before expensive parsing.
     """
     
     def __init__(self, filter_llm_config: Optional[FilterLLMConfig] = None, target_topic: str = ""):
@@ -32,59 +32,57 @@ class URLFilter:
         self.target_topic = target_topic
         self.client = AsyncOpenAI(api_key=self.filter_llm_config.api_key)
     
-    async def filter_crawled_results(self, crawled_results: List[Dict[str, Any]], 
-                                   relevance_threshold: float = 0.7) -> List[Dict[str, Any]]:
+    async def filter_crawled_results(self, crawled_results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Filter crawled results based on relevance to target topic.
+        Filter crawled results based on binary include/exclude decisions for target topic.
         
         Args:
             crawled_results: List of crawled page results
-            relevance_threshold: Minimum relevance score (0.0-1.0) to include page
             
         Returns:
-            Filtered list of relevant crawled results
+            Filtered list of included crawled results
         """
         if not crawled_results:
             return []
         
-        print(f"Filtering {len(crawled_results)} crawled pages for relevance to: {self.target_topic}")
+        print(f"Filtering {len(crawled_results)} crawled pages for inclusion based on: {self.target_topic}")
         
-        # Analyze each page for relevance
+        # Analyze each page for inclusion
         filtered_results = []
         for i, result in enumerate(crawled_results):
             print(f"Analyzing page {i+1}/{len(crawled_results)}: {result['url']}")
             
             try:
-                relevance_score, explanation = await self._analyze_page_relevance(result)
+                should_include, explanation = await self._analyze_page_inclusion(result)
                 
-                if relevance_score >= relevance_threshold:
-                    # Add relevance metadata to the result
-                    result['relevance_score'] = relevance_score
-                    result['relevance_explanation'] = explanation
+                if should_include:
+                    # Add decision metadata to the result
+                    result['included'] = True
+                    result['decision_explanation'] = explanation
                     filtered_results.append(result)
-                    print(f"✅ Included (score: {relevance_score:.2f}): {result['url']}")
+                    print(f"✅ Included: {result['url']}")
                 else:
-                    print(f"❌ Filtered out (score: {relevance_score:.2f}): {result['url']}")
+                    print(f"❌ Excluded: {result['url']}")
                     
             except Exception as e:
                 print(f"⚠️  Error analyzing {result['url']}: {e}")
                 # Include pages that couldn't be analyzed to be safe
-                result['relevance_score'] = 0.5
-                result['relevance_explanation'] = f"Analysis failed: {e}"
+                result['included'] = True
+                result['decision_explanation'] = f"Analysis failed: {e}"
                 filtered_results.append(result)
         
         print(f"Filtered results: {len(filtered_results)}/{len(crawled_results)} pages kept")
         return filtered_results
     
-    async def _analyze_page_relevance(self, page_result: Dict[str, Any]) -> Tuple[float, str]:
+    async def _analyze_page_inclusion(self, page_result: Dict[str, Any]) -> Tuple[bool, str]:
         """
-        Analyze a single page for relevance using LLM.
+        Analyze a single page for inclusion using LLM binary decision.
         
         Args:
             page_result: Single crawled page result
             
         Returns:
-            Tuple of (relevance_score, explanation)
+            Tuple of (should_include, explanation)
         """
         # Prepare content for analysis
         url = page_result.get('url', '')
@@ -98,7 +96,7 @@ class URLFilter:
             content_sample = page_result['html'][:2000]
         
         # Create the analysis prompt
-        prompt = self._create_relevance_prompt(url, title, content_sample)
+        prompt = self._create_inclusion_prompt(url, title, content_sample)
         
         try:
             # Check if this is an o1 model (which doesn't support system messages)
@@ -107,7 +105,7 @@ class URLFilter:
             
             if is_o1_model:
                 # o1 models don't support system messages, so combine into user message
-                combined_prompt = f"""You are an expert at analyzing web content for documentation relevance.
+                combined_prompt = f"""You are an expert at analyzing web content for documentation inclusion decisions.
 
 {prompt}"""
                 messages = [{"role": "user", "content": combined_prompt}]
@@ -119,7 +117,7 @@ class URLFilter:
             else:
                 # Standard models support system messages and parameters
                 messages = [
-                    {"role": "system", "content": "You are an expert at analyzing web content for documentation relevance."},
+                    {"role": "system", "content": "You are an expert at analyzing web content for documentation inclusion decisions."},
                     {"role": "user", "content": prompt}
                 ]
                 response = await self.client.chat.completions.create(
@@ -131,15 +129,15 @@ class URLFilter:
             
             # Parse the response
             response_text = response.choices[0].message.content.strip()
-            return self._parse_relevance_response(response_text)
+            return self._parse_inclusion_response(response_text)
             
         except Exception as e:
             print(f"LLM analysis failed: {e}")
-            return 0.5, f"Analysis failed: {e}"
+            return True, f"Analysis failed: {e}"
     
-    def _create_relevance_prompt(self, url: str, title: str, content_sample: str) -> str:
+    def _create_inclusion_prompt(self, url: str, title: str, content_sample: str) -> str:
         """
-        Create the prompt for relevance analysis.
+        Create the prompt for binary inclusion analysis.
         
         Args:
             url: Page URL
@@ -150,25 +148,22 @@ class URLFilter:
             Formatted prompt for LLM analysis
         """
         return f"""
-Analyze this web page for relevance to the target topic: "{self.target_topic}"
+Analyze this web page and decide whether to INCLUDE or EXCLUDE it for the target topic: "{self.target_topic}"
 
 Page Details:
 - URL: {url}
 - Title: {title}
 - Content Sample: {content_sample}
 
-Please evaluate how relevant this page is to the target topic on a scale of 0.0 to 1.0:
-- 1.0 = Highly relevant, directly related to the target topic
-- 0.7-0.9 = Moderately relevant, contains useful related information
-- 0.4-0.6 = Somewhat relevant, tangentially related
-- 0.1-0.3 = Minimally relevant, barely related
-- 0.0 = Not relevant, unrelated to the target topic
+Make a binary decision based on relevance to the target topic.
 
 Respond in this exact JSON format:
 {{
-    "relevance_score": 0.8,
-    "explanation": "Brief explanation of why this page is or isn't relevant to the target topic"
+    "decision": "include",
+    "explanation": "Brief explanation of why this page should be included or excluded"
 }}
+
+The "decision" field must be exactly "include" or "exclude".
 
 Consider factors like:
 - Does the content directly address the target topic?
@@ -178,15 +173,15 @@ Consider factors like:
 - Does the title suggest relevant content?
 """
     
-    def _parse_relevance_response(self, response_text: str) -> Tuple[float, str]:
+    def _parse_inclusion_response(self, response_text: str) -> Tuple[bool, str]:
         """
-        Parse the LLM response to extract relevance score and explanation.
+        Parse the LLM response to extract binary decision and explanation.
         
         Args:
             response_text: Raw response from LLM
             
         Returns:
-            Tuple of (relevance_score, explanation)
+            Tuple of (should_include, explanation)
         """
         try:
             # Try to parse as JSON
@@ -197,28 +192,26 @@ Consider factors like:
                 json_str = response_text[start:end]
                 
                 data = json.loads(json_str)
-                score = float(data.get('relevance_score', 0.5))
+                decision = data.get('decision', '').lower().strip()
                 explanation = data.get('explanation', 'No explanation provided')
                 
-                # Ensure score is within valid range
-                score = max(0.0, min(1.0, score))
+                # Convert decision to boolean
+                should_include = decision == 'include'
                 
-                return score, explanation
+                return should_include, explanation
             else:
-                # Fallback: try to extract score from text
-                import re
-                score_match = re.search(r'(\d+\.?\d*)', response_text)
-                if score_match:
-                    score = float(score_match.group(1))
-                    if score > 1.0:  # Handle cases where score might be out of 10
-                        score = score / 10.0
-                    score = max(0.0, min(1.0, score))
-                    return score, response_text
+                # Fallback: look for include/exclude keywords in text
+                response_lower = response_text.lower()
+                if 'include' in response_lower and 'exclude' not in response_lower:
+                    return True, response_text
+                elif 'exclude' in response_lower and 'include' not in response_lower:
+                    return False, response_text
                 else:
-                    return 0.5, f"Could not parse response: {response_text}"
+                    # Default to include if unclear
+                    return True, f"Could not parse clear decision: {response_text}"
                     
         except Exception as e:
-            return 0.5, f"Parse error: {e}"
+            return True, f"Parse error: {e}"
     
     def set_target_topic(self, target_topic: str):
         """

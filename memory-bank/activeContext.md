@@ -80,3 +80,34 @@ This file tracks the project's current status, including recent changes, current
   - Created `dual_model_example.py` demonstrating architecture benefits
   - Updated README with dual-model setup instructions
   - Enhanced test scripts with new configuration approach
+## Current Focus (2025-05-25 20:58:00)
+
+* Successfully implemented binary URL filtering system
+* Replaced relevancy scoring (0.0-1.0) with direct include/exclude decisions
+* Simplified user interface by removing threshold configuration
+* Maintained decision transparency through explanations
+
+## Recent Changes (2025-05-25 20:58:00)
+
+* **MAJOR ARCHITECTURE CHANGE**: Binary URL Filtering Implementation
+  - **URLFilter class**: Transformed from scoring to binary decision system
+    - Removed relevance threshold parameters and scoring logic
+    - Updated LLM prompts for direct include/exclude decisions
+    - Changed metadata from `relevance_score` to `included` boolean
+    - Renamed explanations from `relevance_explanation` to `decision_explanation`
+  
+  - **ApiDocCrawler class**: Updated integration for binary filtering
+    - Removed `relevance_threshold` parameters from all methods
+    - Updated result handling for binary decision metadata
+    - Modified save functionality for new decision format
+  
+  - **Command-line interface**: Simplified user experience
+    - Removed `--relevance-threshold` argument
+    - Updated documentation and help text
+    - Streamlined main function signature
+
+* **User Experience Enhancement**:
+  - Eliminated need for threshold configuration
+  - More intuitive binary include/exclude decisions
+  - Maintained transparency with decision explanations
+  - Simplified command-line usage
