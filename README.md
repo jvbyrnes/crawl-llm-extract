@@ -47,6 +47,11 @@ This project provides a modular system for crawling and parsing online programmi
    FILTER_LLM_PROVIDER=openai/gpt-3.5-turbo
    FILTER_LLM_TEMPERATURE=0.0
    ```
+   
+   **Supported Models:**
+   - **Filtering**: `gpt-3.5-turbo`, `gpt-4o-mini`, `o1-mini`, `o1-preview`
+   - **Extraction**: `gpt-4o`, `o1-preview`, `gpt-3.5-turbo`
+   - **Note**: o1 models automatically use compatible message format (no system messages)
 
 ## Usage
 

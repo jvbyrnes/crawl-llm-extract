@@ -145,3 +145,47 @@ This file records architectural and implementation decisions using a list format
 
 * **Filtering**: GPT-3.5-turbo, Claude Haiku (fast, cost-effective)
 * **Extraction**: GPT-4o, Claude Sonnet (high-quality, comprehensive)
+## o1 Model Compatibility Fix (2025-05-25 20:48:00)
+
+* Fixed URLFilter to support o1-mini and o1-preview models
+
+## Issue
+
+* User reported error when using o1-mini as filter model: "Unsupported value: 'messages[0].role' does not support 'system' with this model"
+* o1 models have different API requirements than standard GPT models
+
+## Solution
+
+* **Enhanced URLFilter with model detection**:
+  - Automatically detects o1 models by checking if 'o1' is in model name
+  - Uses different message format for o1 models (user-only, no system messages)
+  - Omits temperature and max_tokens parameters for o1 models
+  - Combines system prompt into user message for o1 compatibility
+
+* **Updated documentation**:
+  - Added supported model list to README
+  - Updated .env.example with o1 model compatibility note
+  - Created test_o1_compatibility.py for verification
+
+## Implementation Details
+
+* **Model Detection Logic**:
+  ```python
+  is_o1_model = 'o1' in model_name.lower()
+  ```
+
+* **o1 Model Message Format**:
+  - Single user message combining system prompt and user prompt
+  - No temperature or max_tokens parameters
+  - No system role messages
+
+* **Standard Model Format** (unchanged):
+  - Separate system and user messages
+  - Temperature and max_tokens parameters supported
+
+## Benefits
+
+* **Universal Compatibility**: Works with all OpenAI models including o1 series
+* **Automatic Detection**: No manual configuration needed for different model types
+* **Backward Compatible**: Existing configurations continue to work
+* **Error Prevention**: Clear handling of model-specific API requirements

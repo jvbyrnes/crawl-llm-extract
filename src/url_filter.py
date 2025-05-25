@@ -101,15 +101,33 @@ class URLFilter:
         prompt = self._create_relevance_prompt(url, title, content_sample)
         
         try:
-            response = await self.client.chat.completions.create(
-                model=self.filter_llm_config.provider.split('/')[-1],  # Extract model name
-                messages=[
+            # Check if this is an o1 model (which doesn't support system messages)
+            model_name = self.filter_llm_config.provider.split('/')[-1]
+            is_o1_model = 'o1' in model_name.lower()
+            
+            if is_o1_model:
+                # o1 models don't support system messages, so combine into user message
+                combined_prompt = f"""You are an expert at analyzing web content for documentation relevance.
+
+{prompt}"""
+                messages = [{"role": "user", "content": combined_prompt}]
+                # o1 models also don't support temperature or max_tokens parameters
+                response = await self.client.chat.completions.create(
+                    model=model_name,
+                    messages=messages
+                )
+            else:
+                # Standard models support system messages and parameters
+                messages = [
                     {"role": "system", "content": "You are an expert at analyzing web content for documentation relevance."},
                     {"role": "user", "content": prompt}
-                ],
-                temperature=self.filter_llm_config.temperature,
-                max_tokens=500
-            )
+                ]
+                response = await self.client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    temperature=self.filter_llm_config.temperature,
+                    max_tokens=500
+                )
             
             # Parse the response
             response_text = response.choices[0].message.content.strip()
