@@ -189,3 +189,52 @@ class LLMConfig:
         return (f"LLMConfig(provider={self.provider}, "
                 f"temperature={self.temperature}, "
                 f"instruction={instruction_preview})")
+
+
+class FilterLLMConfig:
+    """
+    Configuration for the LLM used in URL relevance filtering.
+    Separate from extraction LLM to allow different models and optimization.
+    """
+    
+    def __init__(self, provider=None, temperature=None):
+        """
+        Initialize with provider and temperature for filtering tasks.
+        
+        Args:
+            provider: The LLM provider and model to use for filtering
+            temperature: The temperature setting for the LLM (0.0-1.0)
+        """
+        # Load from environment variables - REQUIRED for filtering
+        self.provider = provider if provider is not None else os.getenv('FILTER_LLM_PROVIDER')
+        self.temperature = temperature if temperature is not None else self._get_env_float('FILTER_LLM_TEMPERATURE', 0.0)
+        self.api_key = os.getenv('OPENAI_API_KEY')  # For now, assume OpenAI for both
+    
+    def _get_env_float(self, key: str, default: float) -> float:
+        """Get a float from environment variables."""
+        value = os.getenv(key)
+        return float(value) if value is not None else default
+    
+    def validate(self):
+        """
+        Validate the configuration parameters.
+        
+        Raises:
+            ValueError: If any parameter is invalid or missing
+        """
+        if not self.provider:
+            raise ValueError("FILTER_LLM_PROVIDER must be set in environment variables or .env file")
+        if self.temperature < 0 or self.temperature > 1:
+            raise ValueError("temperature must be between 0 and 1")
+        if not self.api_key:
+            raise ValueError("OPENAI_API_KEY not set in environment variables or .env file")
+    
+    def __str__(self):
+        """
+        Return a string representation of the configuration.
+        
+        Returns:
+            String representation
+        """
+        return (f"FilterLLMConfig(provider={self.provider}, "
+                f"temperature={self.temperature})")

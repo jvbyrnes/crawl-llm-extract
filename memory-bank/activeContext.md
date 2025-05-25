@@ -35,3 +35,48 @@ This file tracks the project's current status, including recent changes, current
 * How to ensure efficient caching for both crawling and LLM operations (to be addressed in later phases)
 * How to handle very large API documentation sites that may require pagination (to be addressed in later phases)
 * Which API documentation sites to use for testing the implementation (need to select diverse examples)
+## Current Focus (2025-05-25 20:08:00)
+
+* Successfully implemented LLM-based URL filtering system
+* Enhanced the crawler with intelligent content relevance analysis
+* Updated documentation and created comprehensive test examples
+
+## Recent Changes (2025-05-25 20:08:00)
+
+* **NEW FEATURE**: LLM-based post-crawl content filtering
+  - Created `URLFilter` class for intelligent page relevance analysis
+  - Integrated filtering into `ApiDocCrawler` workflow
+  - Added command-line options for target topic and relevance threshold
+  - Enhanced output to include relevance scores and explanations
+  - Created test script demonstrating filtering capabilities
+  - Updated README with comprehensive examples and documentation
+
+* **Architecture Enhancement**: 
+  - Maintained modular design while adding sophisticated filtering
+  - Preserved backward compatibility (filtering is optional)
+  - Added transparent relevance scoring and explanations
+## Current Focus (2025-05-25 20:32:00)
+
+* Successfully implemented dual-model LLM architecture
+* Separated filtering and extraction models for optimal cost/performance balance
+* Enhanced system with independent model configurations and validation
+
+## Recent Changes (2025-05-25 20:32:00)
+
+* **MAJOR ARCHITECTURE ENHANCEMENT**: Dual-Model LLM System
+  - Created `FilterLLMConfig` class for dedicated filtering model configuration
+  - Updated `URLFilter` to use separate filtering model
+  - Enhanced `ApiDocCrawler` with dual-model support
+  - Updated all scripts and examples to use new architecture
+  - Added comprehensive validation and error handling
+  - Updated environment configuration with required variables
+
+* **Configuration Management**:
+  - FILTER_LLM_PROVIDER now required for filtering functionality
+  - Clear separation between extraction and filtering model settings
+  - Updated .env.example and user .env with optimal model recommendations
+
+* **Documentation and Examples**:
+  - Created `dual_model_example.py` demonstrating architecture benefits
+  - Updated README with dual-model setup instructions
+  - Enhanced test scripts with new configuration approach
