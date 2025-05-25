@@ -111,3 +111,31 @@ This file tracks the project's current status, including recent changes, current
   - More intuitive binary include/exclude decisions
   - Maintained transparency with decision explanations
   - Simplified command-line usage
+## Current Focus (2025-05-25 21:26:00)
+
+* Successfully created comprehensive architecture documentation
+* Generated both high-level overview and detailed technical diagrams
+* Documented complete system architecture including recent binary filtering enhancement
+
+## Recent Changes (2025-05-25 21:26:00)
+
+* **ARCHITECTURE DOCUMENTATION**: Created comprehensive system diagrams
+  - **High-Level Overview** (`diagrams/system-overview-2025-05-25.md`):
+    - Stakeholder-friendly flowchart showing main components and data flow
+    - Highlighted dual-model LLM architecture and binary filtering
+    - Clear visualization of configuration layer and external dependencies
+    - Process pipeline from URL input to saved results
+  
+  - **Detailed Technical Diagram** (`diagrams/detailed-architecture-2025-05-25.md`):
+    - Complete class diagram with all methods and relationships
+    - Sequence diagram showing LLM interaction flows
+    - Configuration and environment variable mapping
+    - Error handling and fallback mechanisms
+    - Technical implementation details for recent enhancements
+
+* **Documentation Features**:
+  - Mermaid diagrams for interactive visualization
+  - Color-coded components for different system layers
+  - Comprehensive coverage of binary filtering enhancement (2025-05-25)
+  - Dual-model LLM architecture benefits and implementation
+  - Async processing patterns and error handling strategies
