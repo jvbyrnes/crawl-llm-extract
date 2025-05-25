@@ -4,13 +4,22 @@ Configuration classes for the API documentation crawler.
 This module contains the configuration classes for the crawler and LLM parser.
 """
 
+import os
+from typing import List, Optional
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+# Allow specifying a custom .env file path through DOTENV_PATH
+dotenv_path = os.getenv('DOTENV_PATH', '.env')
+load_dotenv(dotenv_path)
+
 class CrawlerConfig:
     """
     Configuration for the web crawler used in API documentation crawling.
     Keeps it simple with just the essential parameters.
     """
     
-    def __init__(self, max_depth=2, include_external=False, max_pages=25):
+    def __init__(self, max_depth=None, include_external=None, max_pages=None):
         """
         Initialize with basic crawler parameters.
         
@@ -19,11 +28,29 @@ class CrawlerConfig:
             include_external: Whether to include external links
             max_pages: Maximum number of pages to crawl
         """
-        self.max_depth = max_depth
-        self.include_external = include_external
-        self.max_pages = max_pages
+        # Load from environment variables or use defaults
+        self.max_depth = max_depth if max_depth is not None else self._get_env_int('MAX_DEPTH', 2)
+        self.include_external = include_external if include_external is not None else self._get_env_bool('INCLUDE_EXTERNAL', False)
+        self.max_pages = max_pages if max_pages is not None else self._get_env_int('MAX_PAGES', 25)
         self.keywords = []
-        self.weight = 0.7
+        self.weight = self._get_env_float('KEYWORD_WEIGHT', 0.7)
+    
+    def _get_env_int(self, key: str, default: int) -> int:
+        """Get an integer from environment variables."""
+        value = os.getenv(key)
+        return int(value) if value is not None else default
+    
+    def _get_env_bool(self, key: str, default: bool) -> bool:
+        """Get a boolean from environment variables."""
+        value = os.getenv(key)
+        if value is None:
+            return default
+        return value.lower() in ('true', 'yes', '1', 't', 'y')
+    
+    def _get_env_float(self, key: str, default: float) -> float:
+        """Get a float from environment variables."""
+        value = os.getenv(key)
+        return float(value) if value is not None else default
     
     def set_keywords(self, keywords, weight=0.7):
         """
@@ -70,7 +97,7 @@ class LLMConfig:
     Keeps it simple with just the essential parameters.
     """
     
-    def __init__(self, provider="openai/gpt-4o", temperature=0.1):
+    def __init__(self, provider=None, temperature=None):
         """
         Initialize with provider and temperature.
         
@@ -78,9 +105,16 @@ class LLMConfig:
             provider: The LLM provider and model to use
             temperature: The temperature setting for the LLM (0.0-1.0)
         """
-        self.provider = provider
-        self.temperature = temperature
+        # Load from environment variables or use defaults
+        self.provider = provider if provider is not None else os.getenv('LLM_PROVIDER', 'openai/gpt-4o')
+        self.temperature = temperature if temperature is not None else self._get_env_float('LLM_TEMPERATURE', 0.1)
+        self.api_key = os.getenv('OPENAI_API_KEY')
         self.instruction = self.get_generic_instruction()
+    
+    def _get_env_float(self, key: str, default: float) -> float:
+        """Get a float from environment variables."""
+        value = os.getenv(key)
+        return float(value) if value is not None else default
     
     def get_generic_instruction(self):
         """
@@ -141,6 +175,8 @@ class LLMConfig:
             raise ValueError("temperature must be between 0 and 1")
         if not self.instruction:
             raise ValueError("instruction must not be empty")
+        if not self.api_key:
+            raise ValueError("OPENAI_API_KEY not set in environment variables or .env file")
         
     def __str__(self):
         """

@@ -29,10 +29,11 @@ This project provides a modular system for crawling and parsing online programmi
    pip install -r requirements.txt
    ```
 
-3. Set up your OpenAI API key:
+3. Set up your environment variables:
    ```
-   export OPENAI_API_KEY=your_api_key  # On Windows: set OPENAI_API_KEY=your_api_key
+   cp .env.example .env
    ```
+   Then edit the `.env` file to add your OpenAI API key and customize other settings.
 
 ## Usage
 

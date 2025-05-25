@@ -4,7 +4,6 @@ Main script for the API documentation crawler.
 This script demonstrates how to use the API documentation crawler.
 """
 
-import os
 import asyncio
 import argparse
 from typing import Optional
@@ -61,12 +60,6 @@ if __name__ == "__main__":
     parser.add_argument("--include-external", action="store_true", help="Include external links")
     
     args = parser.parse_args()
-    
-    # Check for API key
-    if not os.getenv('OPENAI_API_KEY'):
-        print("Error: OPENAI_API_KEY environment variable not set")
-        print("Please set it with: export OPENAI_API_KEY=your_api_key")
-        exit(1)
     
     # Run the main function
     asyncio.run(main(

@@ -43,14 +43,13 @@ class LLMParser:
         self.config.validate()
         
         # Check for API token
-        api_token = os.getenv('OPENAI_API_KEY')
-        if not api_token:
-            raise ValueError("OPENAI_API_KEY environment variable not set")
+        if not self.config.api_key:
+            raise ValueError("OPENAI_API_KEY not set in environment variables or .env file")
         
         # Create LLM configuration for crawl4ai
         llm_config = Crawl4aiLLMConfig(
             provider=self.config.provider,
-            api_token=api_token
+            api_token=self.config.api_key
         )
         
         # Initialize LLM filter
