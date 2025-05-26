@@ -6,7 +6,7 @@
 ```mermaid
 flowchart TD
     %% User Interface Layer
-    CLI[Command Line Interface<br/>--url, --target-topic, --max-depth, etc.]
+    CLI[Command Line Interface<br/>--url, --enable-filtering, --target-topic, --max-depth, etc.]
     
     %% Core System Components
     subgraph "Core System"
@@ -85,17 +85,32 @@ flowchart TD
 
 ## System Flow Summary
 
-1. **Input**: User provides target URL and optional filtering topic via CLI
-2. **Configuration**: System initializes crawler, LLM, and filter configurations
+1. **Input**: User provides target URL and optional filtering flags (--enable-filtering + --target-topic) via CLI
+2. **Configuration**: System initializes crawler, LLM, and filter configurations (filter only if explicitly enabled)
 3. **Crawling**: DeepCrawler uses crawl4ai to discover and fetch pages
-4. **Binary Filtering**: URLFilter uses fast LLM to make include/exclude decisions
-5. **Content Extraction**: LLMParser uses premium LLM to extract structured content
+4. **Binary Filtering** (opt-in): URLFilter uses fast LLM to make include/exclude decisions only when explicitly enabled
+5. **Content Extraction**: LLMParser uses premium LLM to extract structured content from all/filtered pages
 6. **Output**: Results saved to filesystem with metadata and explanations
 
 ## Key Architectural Decisions
 
+- **Filtering Opt-In (2025-05-26)**: Filtering requires explicit enablement with both `--enable-filtering` and `--target-topic` flags
 - **Dual-Model LLM Architecture**: Separate optimized models for different tasks
 - **Binary Filtering**: Simplified from scoring to include/exclude decisions
 - **Modular Design**: Loosely coupled components for maintainability
 - **Async Processing**: Concurrent operations for performance
 - **Configuration-Driven**: Environment-based setup with validation
+
+## Command-Line Usage Examples
+
+```bash
+# Default behavior - no filtering (fast, no LLM filtering costs)
+python -m src.main https://docs.example.com/api
+
+# Explicit filtering - requires both flags
+python -m src.main https://docs.example.com/api --enable-filtering --target-topic "Python SDK documentation"
+
+# Error case - filtering flag without target topic
+python -m src.main https://docs.example.com/api --enable-filtering
+# Shows: error: --target-topic is required when --enable-filtering is used
+```

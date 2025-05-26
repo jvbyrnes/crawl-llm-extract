@@ -48,10 +48,11 @@ classDiagram
         +LLMConfig llm_config
         +FilterLLMConfig filter_llm_config
         +str target_topic
+        +bool filtering_enabled
         +DeepCrawler crawler
         +URLFilter url_filter
         +LLMParser parser
-        +__init__(crawler_config, llm_config, filter_llm_config, target_topic)
+        +__init__(crawler_config, llm_config, filter_llm_config, target_topic, filtering_enabled)
         +crawl_and_parse(url) List~Dict~
         +crawl_only(url) List~Dict~
         +parse_only(html_content) List~str~
@@ -148,9 +149,13 @@ sequenceDiagram
     participant FS as File System
     
     %% Initialization Phase
-    CLI->>AC: Initialize with configs
+    CLI->>AC: Initialize with configs + filtering_enabled
     AC->>DC: Create DeepCrawler
-    AC->>UF: Create URLFilter (if target_topic)
+    alt filtering_enabled AND target_topic
+        AC->>UF: Create URLFilter
+    else
+        AC->>AC: url_filter = None
+    end
     AC->>LP: Create LLMParser
     
     %% Crawling Phase
@@ -160,8 +165,8 @@ sequenceDiagram
     C4AI-->>DC: CrawlResult[]
     DC-->>AC: processed_results[]
     
-    %% Binary Filtering Phase (if enabled)
-    alt target_topic provided
+    %% Binary Filtering Phase (opt-in only)
+    alt filtering_enabled AND target_topic AND url_filter exists
         AC->>UF: filter_crawled_results(results)
         loop for each page
             UF->>FLLM: analyze_page_inclusion(page)
@@ -169,6 +174,8 @@ sequenceDiagram
             UF->>UF: parse_inclusion_response()
         end
         UF-->>AC: filtered_results[]
+    else
+        AC->>AC: Keep all crawled pages (no filtering)
     end
     
     %% Content Extraction Phase
@@ -282,6 +289,12 @@ flowchart TD
 ```
 
 ## Key Technical Features
+
+### Filtering Opt-In Enhancement (2025-05-26)
+- **Explicit Control**: Filtering now requires both `--enable-filtering` flag and `--target-topic`
+- **Performance Optimization**: No LLM calls when filtering disabled (default behavior)
+- **Cost Management**: Filter LLM API usage only when explicitly requested
+- **Clear Intent**: Users must explicitly opt-in to filtering behavior
 
 ### Binary Filtering Enhancement (2025-05-25)
 - **Simplified Decision Making**: Replaced 0.0-1.0 scoring with include/exclude
