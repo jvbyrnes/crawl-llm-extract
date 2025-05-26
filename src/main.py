@@ -14,7 +14,7 @@ from .api_doc_crawler import ApiDocCrawler
 
 async def main(url: str, output_dir: str = "output", keywords: Optional[str] = None,
                max_depth: int = 2, max_pages: int = 25, include_external: bool = False,
-               target_topic: Optional[str] = None) -> None:
+               target_topic: Optional[str] = None, enable_filtering: bool = False) -> None:
     """
     Main function for the API documentation crawler.
     
@@ -26,6 +26,7 @@ async def main(url: str, output_dir: str = "output", keywords: Optional[str] = N
         max_pages: Maximum number of pages to crawl
         include_external: Whether to include external links
         target_topic: Target topic for LLM-based binary filtering (e.g., "Python SDK documentation")
+        enable_filtering: Whether to enable LLM-based filtering (requires target_topic)
     """
     # Create configurations
     crawler_config = CrawlerConfig(
@@ -39,13 +40,13 @@ async def main(url: str, output_dir: str = "output", keywords: Optional[str] = N
     
     llm_config = LLMConfig()
     
-    # Create filter LLM config if target topic is specified
+    # Create filter LLM config only if filtering is explicitly enabled
     filter_llm_config = None
-    if target_topic:
+    if enable_filtering and target_topic:
         filter_llm_config = FilterLLMConfig()
     
     # Create the crawler with dual-model configuration
-    crawler = ApiDocCrawler(crawler_config, llm_config, filter_llm_config, target_topic or "")
+    crawler = ApiDocCrawler(crawler_config, llm_config, filter_llm_config, target_topic or "", enable_filtering)
     
     # Crawl and parse with optional filtering
     results = await crawler.crawl_and_parse(url)
@@ -55,8 +56,10 @@ async def main(url: str, output_dir: str = "output", keywords: Optional[str] = N
     
     print(f"Processed {len(results)} pages from {url}")
     
-    if target_topic:
+    if enable_filtering and target_topic:
         print(f"Used LLM binary filtering for target topic: {target_topic}")
+    else:
+        print("No filtering applied - all crawled pages were kept")
 
 
 if __name__ == "__main__":
@@ -68,9 +71,14 @@ if __name__ == "__main__":
     parser.add_argument("--max-depth", type=int, default=2, help="Maximum depth for crawling")
     parser.add_argument("--max-pages", type=int, default=25, help="Maximum number of pages to crawl")
     parser.add_argument("--include-external", action="store_true", help="Include external links")
-    parser.add_argument("--target-topic", help="Target topic for LLM-based binary filtering (e.g., 'Python SDK documentation')")
+    parser.add_argument("--enable-filtering", action="store_true", help="Enable LLM-based page filtering for relevance (must be used with --target-topic)")
+    parser.add_argument("--target-topic", help="Target topic for filtering when --enable-filtering is used (e.g., 'Python SDK documentation')")
     
     args = parser.parse_args()
+    
+    # Validate flag combination
+    if args.enable_filtering and not args.target_topic:
+        parser.error("--target-topic is required when --enable-filtering is used")
     
     # Run the main function
     asyncio.run(main(
@@ -80,5 +88,6 @@ if __name__ == "__main__":
         args.max_depth,
         args.max_pages,
         args.include_external,
-        args.target_topic
+        args.target_topic,
+        args.enable_filtering
     ))

@@ -24,7 +24,8 @@ class ApiDocCrawler:
     def __init__(self, crawler_config: Optional[CrawlerConfig] = None,
                  llm_config: Optional[LLMConfig] = None,
                  filter_llm_config: Optional[FilterLLMConfig] = None,
-                 target_topic: str = ""):
+                 target_topic: str = "",
+                 filtering_enabled: bool = False):
         """
         Initialize with optional configurations for dual-model architecture.
         
@@ -33,14 +34,21 @@ class ApiDocCrawler:
             llm_config: Configuration for the extraction LLM (LLMConfig)
             filter_llm_config: Configuration for the filtering LLM (FilterLLMConfig)
             target_topic: Target topic for URL filtering (e.g., "Python SDK documentation")
+            filtering_enabled: Whether to enable LLM-based filtering
         """
         self.crawler_config = crawler_config or CrawlerConfig()
         self.llm_config = llm_config or LLMConfig()
-        self.filter_llm_config = filter_llm_config or FilterLLMConfig()
+        self.filter_llm_config = filter_llm_config
         self.target_topic = target_topic
+        self.filtering_enabled = filtering_enabled
         self.deep_crawler = DeepCrawler(self.crawler_config)
         self.llm_parser = LLMParser(self.llm_config)
-        self.url_filter = URLFilter(self.filter_llm_config, target_topic)
+        
+        # Only initialize URLFilter when filtering is enabled
+        if filtering_enabled and filter_llm_config:
+            self.url_filter = URLFilter(filter_llm_config, target_topic)
+        else:
+            self.url_filter = None
     
     async def crawl_and_parse(self, url: str) -> List[Dict[str, Any]]:
         """
@@ -62,8 +70,8 @@ class ApiDocCrawler:
         
         print(f"Found {len(crawler_results)} pages.")
         
-        # Filter results for inclusion if target topic is specified
-        if self.target_topic:
+        # Filter results for inclusion if filtering is explicitly enabled
+        if self.filtering_enabled and self.target_topic and self.url_filter:
             print(f"Filtering for inclusion based on: {self.target_topic}")
             crawler_results = await self.url_filter.filter_crawled_results(crawler_results)
             
@@ -73,7 +81,7 @@ class ApiDocCrawler:
             
             print(f"After filtering: {len(crawler_results)} included pages.")
         else:
-            print("No target topic specified, skipping inclusion filtering.")
+            print("Filtering disabled - keeping all crawled pages.")
         
         # Parse each filtered result
         parsed_results = []
@@ -115,10 +123,12 @@ class ApiDocCrawler:
         """
         crawler_results = await self.deep_crawler.crawl(url)
         
-        # Filter results for inclusion if target topic is specified
-        if self.target_topic and crawler_results:
+        # Filter results for inclusion if filtering is explicitly enabled
+        if self.filtering_enabled and self.target_topic and self.url_filter and crawler_results:
             print(f"Filtering crawled results for inclusion based on: {self.target_topic}")
             crawler_results = await self.url_filter.filter_crawled_results(crawler_results)
+        elif crawler_results:
+            print("Filtering disabled - keeping all crawled pages.")
         
         return crawler_results
     
@@ -142,7 +152,8 @@ class ApiDocCrawler:
             target_topic: Target topic description (e.g., "Python SDK documentation")
         """
         self.target_topic = target_topic
-        self.url_filter.set_target_topic(target_topic)
+        if self.url_filter:
+            self.url_filter.set_target_topic(target_topic)
         print(f"Updated target topic to: {target_topic}")
     
     def set_filter_llm_config(self, filter_llm_config: FilterLLMConfig):
@@ -153,7 +164,8 @@ class ApiDocCrawler:
             filter_llm_config: New filter LLM configuration
         """
         self.filter_llm_config = filter_llm_config
-        self.url_filter = URLFilter(filter_llm_config, self.target_topic)
+        if self.filtering_enabled:
+            self.url_filter = URLFilter(filter_llm_config, self.target_topic)
         print(f"Updated filter LLM config to: {filter_llm_config}")
     
     def save_results(self, results: List[Dict[str, Any]], output_dir: str = "output") -> None:

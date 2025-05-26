@@ -76,3 +76,37 @@ This file tracks the project's progress using a task list format.
   - Streamlined user experience with binary decisions
   - Maintained decision transparency through explanations
   - Reduced API complexity while preserving functionality
+## Completed Tasks (2025-05-26 17:39:00)
+
+* **MAJOR FEATURE ENHANCEMENT**: Filtering Opt-In Implementation
+  - **Phase 1**: Updated command-line interface (`src/main.py`)
+    - Added `--enable-filtering` flag with proper validation
+    - Updated main function signature to support filtering control
+    - Added error handling for invalid flag combinations
+    - Enhanced help text and documentation
+  
+  - **Phase 2**: Enhanced ApiDocCrawler class (`src/api_doc_crawler.py`)
+    - Added `filtering_enabled` parameter to constructor
+    - Modified filtering logic to be conditional on explicit enablement
+    - Updated URLFilter initialization to only occur when needed
+    - Enhanced all filtering methods to check enablement status
+  
+  - **Phase 3**: Comprehensive testing and validation
+    - Created test script to validate all functionality
+    - Tested command-line argument combinations
+    - Verified error handling works correctly
+    - Confirmed both filtering enabled and disabled scenarios work
+    - Validated backward compatibility for programmatic usage
+
+* **Architecture Improvement**:
+  - **Performance optimization**: No LLM calls when filtering disabled
+  - **Cost control**: Filter LLM API usage only when explicitly requested
+  - **User experience**: Clear, explicit control over filtering behavior
+  - **Backward compatibility**: Existing code continues to work unchanged
+
+* **Validation Results**:
+  - ✅ Default behavior: No filtering, all pages kept
+  - ✅ Error case: `--enable-filtering` without `--target-topic` shows clear error
+  - ✅ Filtering enabled: Both flags together enable LLM-based filtering
+  - ✅ Target topic only: No filtering applied when `--enable-filtering` not used
+  - ✅ Help text: Shows new flag with proper documentation

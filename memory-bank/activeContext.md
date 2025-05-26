@@ -139,3 +139,39 @@ This file tracks the project's current status, including recent changes, current
   - Comprehensive coverage of binary filtering enhancement (2025-05-25)
   - Dual-model LLM architecture benefits and implementation
   - Async processing patterns and error handling strategies
+## Current Focus (2025-05-26 17:39:00)
+
+* Successfully implemented filtering opt-in functionality
+* Made LLM-based filtering explicitly opt-in with --enable-filtering flag requirement
+* Validated all functionality with comprehensive testing
+
+## Recent Changes (2025-05-26 17:39:00)
+
+* **MAJOR FEATURE ENHANCEMENT**: Filtering Opt-In Implementation
+  - **Command-line interface**: Added `--enable-filtering` flag that requires `--target-topic`
+    - Updated argument parsing with proper validation
+    - Added clear error messages for invalid flag combinations
+    - Updated help text to reflect new requirements
+  
+  - **ApiDocCrawler class**: Enhanced to support optional filtering
+    - Added `filtering_enabled` parameter to constructor
+    - Modified filtering logic to only run when explicitly enabled
+    - Updated URLFilter initialization to be conditional
+    - Enhanced logging to clearly indicate filtering status
+  
+  - **Backward compatibility**: Maintained for programmatic usage
+    - Existing code continues to work with new optional parameter
+    - Default behavior is no filtering (safe and fast)
+
+* **User Experience Enhancement**:
+  - **Default behavior**: No filtering applied - all pages kept
+  - **Explicit control**: Users must opt-in to filtering with both flags
+  - **Performance**: No unnecessary LLM calls when filtering disabled
+  - **Cost savings**: Filter LLM API costs only when explicitly requested
+  - **Clear feedback**: Distinct messages for filtered vs non-filtered runs
+
+* **Testing and Validation**:
+  - Created comprehensive test script
+  - Validated all command-line combinations
+  - Confirmed error handling works correctly
+  - Tested both filtering enabled and disabled scenarios

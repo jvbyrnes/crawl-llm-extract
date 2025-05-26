@@ -249,3 +249,31 @@ Respond in this exact JSON format:
 * `relevance_threshold` parameter removed from API methods
 * Result metadata structure changed from scores to boolean decisions
 * Migration: Users should remove threshold parameters from existing scripts
+[2025-05-26 17:39:00] - **ARCHITECTURAL DECISION**: Filtering Opt-In Implementation
+
+**Decision**: Changed LLM-based page filtering from automatic (when target topic provided) to explicit opt-in requiring both `--enable-filtering` flag and `--target-topic`.
+
+**Rationale**: 
+- **User Control**: Users wanted ability to disable filtering easily without removing target topic
+- **Performance**: Avoid unnecessary LLM API calls when filtering not desired
+- **Cost Management**: Filter LLM costs should only be incurred when explicitly requested
+- **Explicit Intent**: Make filtering behavior clear and intentional rather than automatic
+
+**Implementation**:
+- Added `--enable-filtering` command-line flag with validation
+- Modified `ApiDocCrawler` constructor to accept `filtering_enabled` parameter
+- Updated filtering logic to be conditional on explicit enablement
+- Enhanced error handling and user feedback messages
+- Maintained backward compatibility for programmatic usage
+
+**Impact**:
+- **Breaking Change**: Users previously relying on automatic filtering must add `--enable-filtering` flag
+- **Performance Improvement**: Default behavior is faster (no LLM filtering calls)
+- **Cost Reduction**: Filter LLM API usage only when explicitly requested
+- **Better UX**: Clear control over filtering behavior with explicit opt-in
+
+**Validation**: Comprehensive testing confirmed all scenarios work correctly:
+- Default: No filtering applied
+- Error handling: Clear messages for invalid flag combinations  
+- Filtering enabled: Works when both flags provided
+- Backward compatibility: Programmatic usage preserved
