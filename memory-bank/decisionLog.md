@@ -277,3 +277,94 @@ Respond in this exact JSON format:
 - Error handling: Clear messages for invalid flag combinations  
 - Filtering enabled: Works when both flags provided
 - Backward compatibility: Programmatic usage preserved
+[2025-05-26 19:20:00] - **ARCHITECTURAL DECISION**: Content-Based Deduplication System Implementation
+
+**Decision**: Implemented a comprehensive content-based deduplication system to avoid redundant LLM processing by tracking content changes via SHA-256 hash comparison of cleaned HTML.
+
+**Rationale**: 
+- **Cost Efficiency**: User identified that re-crawling the same documentation sites wastes LLM API costs when content hasn't changed
+- **Performance**: Redundant LLM processing is slow and expensive for unchanged content
+- **Intelligence**: URL-based tracking insufficient - content can change while URL remains the same
+- **User Control**: System should be smart by default but allow opt-out when needed
+
+**Implementation**:
+- **ContentIndexManager**: New class managing content hashes and extraction cache
+  - SHA-256 hashing of cleaned HTML content for change detection
+  - JSON-based index storage in `extracted-docs/` directory structure
+  - Cached extraction and metadata management with file-based storage
+  - Cache statistics, cleanup utilities, and stale entry management
+- **Enhanced ApiDocCrawler**: Integrated deduplication logic into crawling workflow
+  - Content hash checking before LLM processing decisions
+  - Mixed result handling combining cached and newly processed content
+  - Cache hit/miss statistics and transparent reporting
+  - Optional deduplication with `enable_deduplication` parameter (default: True)
+- **Command-line Interface**: Added `--disable-deduplication` flag for user control
+- **Testing**: Comprehensive test suite validating deduplication behavior
+
+**Technical Approach**:
+- **Hash Algorithm**: SHA-256 of cleaned HTML content (not raw HTML)
+- **Storage Structure**: 
+  ```
+  extracted-docs/
+  ├── content_index.json          # Main URL-to-hash mapping
+  ├── extractions/{hash}.json     # Cached LLM extraction results  
+  └── metadata/{hash}_meta.json   # Page metadata cache
+  ```
+- **Logic Flow**: URL in index? → Compare content hashes → Use cache if unchanged, re-process if changed
+- **File Naming**: URL hash-based filenames to avoid filesystem conflicts
+
+**Impact**:
+- **Cost Reduction**: Eliminates redundant LLM API calls for unchanged content
+- **Performance Improvement**: Faster processing through intelligent caching
+- **User Experience**: Transparent cache statistics and clear control options
+- **Backward Compatibility**: Existing workflows continue unchanged
+- **Future-Proof**: Foundation for advanced caching strategies
+
+**Validation**: Comprehensive testing confirmed all scenarios work correctly:
+- Fresh cache: All content processed with LLM
+- Cache hits: Unchanged content retrieved from cache
+- Content changes: Modified content re-processed with LLM
+- Deduplication disabled: All content processed regardless of cache
+- Cache management: Statistics and cleanup utilities functional
+[2025-05-26 19:59:00] - **ARCHITECTURAL DECISION**: Removed --disable-deduplication Option - Deduplication Always Enabled
+
+**Decision**: Removed the `--disable-deduplication` command-line flag and `enable_deduplication` parameter from the `ApiDocCrawler` class constructor. Deduplication is now always enabled with no option to disable it.
+
+**Rationale**: 
+- **Cost Optimization**: Deduplication prevents redundant LLM API calls, which saves money
+- **Performance**: Always benefits from intelligent caching for faster processing
+- **Simplicity**: Eliminates user confusion about when to enable/disable deduplication
+- **Best Practice**: There's no valid use case for wanting redundant LLM processing
+
+**Implementation**:
+- **Command-Line Interface** (`src/main.py`):
+  - Removed `--disable-deduplication` argument from argument parser
+  - Removed `disable_deduplication` parameter from `main()` function
+  - Simplified function signature and removed related logic
+  - Updated help text and documentation
+
+- **ApiDocCrawler Class** (`src/api_doc_crawler.py`):
+  - Removed `enable_deduplication` parameter from constructor
+  - Always initialize `ContentIndexManager` without conditional logic
+  - Removed all `if self.enable_deduplication` conditional checks
+  - Simplified all methods to always use deduplication
+  - Updated constructor documentation
+
+- **Test Files**:
+  - Updated `test_deduplication.py` to remove disabled deduplication test
+  - Updated `demo_deduplication.py` to remove `enable_deduplication` parameter
+  - Removed third test run that tested with deduplication disabled
+
+**Impact**:
+- **Breaking Change**: `--disable-deduplication` flag no longer exists
+- **API Change**: `enable_deduplication` parameter removed from constructor
+- **Performance Improvement**: All crawling operations now benefit from deduplication
+- **Cost Reduction**: Eliminates possibility of redundant LLM processing
+- **Simplified Architecture**: Reduced conditional logic and complexity
+
+**Validation**: Comprehensive testing confirmed:
+- Command-line interface works without the flag
+- Deduplication functionality operates correctly
+- Cache statistics show proper operation
+- All existing functionality preserved
+- No performance degradation

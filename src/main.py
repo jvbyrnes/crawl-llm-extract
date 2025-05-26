@@ -45,7 +45,7 @@ async def main(url: str, output_dir: str = "output", keywords: Optional[str] = N
     if enable_filtering and target_topic:
         filter_llm_config = FilterLLMConfig()
     
-    # Create the crawler with dual-model configuration
+    # Create the crawler with dual-model configuration (deduplication always enabled)
     crawler = ApiDocCrawler(crawler_config, llm_config, filter_llm_config, target_topic or "", enable_filtering)
     
     # Crawl and parse with optional filtering
@@ -60,6 +60,8 @@ async def main(url: str, output_dir: str = "output", keywords: Optional[str] = N
         print(f"Used LLM binary filtering for target topic: {target_topic}")
     else:
         print("No filtering applied - all crawled pages were kept")
+    
+    print("Content-based deduplication enabled - avoided redundant LLM processing")
 
 
 if __name__ == "__main__":

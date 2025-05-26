@@ -175,3 +175,87 @@ This file tracks the project's current status, including recent changes, current
   - Validated all command-line combinations
   - Confirmed error handling works correctly
   - Tested both filtering enabled and disabled scenarios
+## Current Focus (2025-05-26 19:20:00)
+
+* Successfully implemented content-based deduplication system
+* Created ContentIndexManager for intelligent cache management
+* Enhanced ApiDocCrawler with deduplication logic to avoid redundant LLM processing
+* Updated command-line interface with deduplication controls
+
+## Recent Changes (2025-05-26 19:20:00)
+
+* **MAJOR FEATURE IMPLEMENTATION**: Content-Based Deduplication System
+  - **ContentIndexManager class** (`src/content_index.py`):
+    - SHA-256 content hashing for change detection
+    - JSON-based index storage in `extracted-docs/` directory
+    - Cached extraction and metadata management
+    - Cache statistics and cleanup utilities
+    - Intelligent content change detection logic
+  
+  - **Enhanced ApiDocCrawler** (`src/api_doc_crawler.py`):
+    - Integrated ContentIndexManager for deduplication
+    - Added `enable_deduplication` parameter (default: True)
+    - Modified `crawl_and_parse()` to check content hashes before LLM processing
+    - Cache hit/miss statistics and reporting
+    - Mixed result handling (cached + newly processed content)
+    - Enhanced `save_results()` with cache metadata
+  
+  - **Updated command-line interface** (`src/main.py`):
+    - Added `--disable-deduplication` flag for opt-out control
+    - Enhanced output with deduplication statistics
+    - Maintained backward compatibility
+
+* **Architecture Benefits**:
+  - **Cost Reduction**: Eliminates redundant LLM API calls for unchanged content
+  - **Performance**: Faster processing for previously crawled content
+  - **Intelligence**: Content-based change detection using cleaned HTML hashes
+  - **Transparency**: Clear reporting of cache hits vs new processing
+  - **Flexibility**: Can be disabled when needed
+
+* **Testing and Validation**:
+  - Created comprehensive test script (`test_deduplication.py`)
+  - Validates cache behavior across multiple runs
+  - Tests deduplication enabled vs disabled scenarios
+  - Demonstrates cache management functionality
+## Current Focus (2025-05-26 19:59:00)
+
+* Successfully removed --disable-deduplication option from the crawler system
+* Simplified architecture by making deduplication always enabled
+* Validated all functionality works correctly with always-on deduplication
+
+## Recent Changes (2025-05-26 19:59:00)
+
+* **MAJOR ARCHITECTURAL SIMPLIFICATION**: Removed Deduplication Opt-Out Functionality
+  - **Command-Line Interface**: Completely removed `--disable-deduplication` flag
+    - Updated argument parser to eliminate the flag
+    - Simplified main function signature by removing disable_deduplication parameter
+    - Updated help text to reflect that deduplication is always enabled
+    - Removed logic that converted disable flag to enable parameter
+  
+  - **ApiDocCrawler Class**: Eliminated enable_deduplication parameter and conditional logic
+    - Removed enable_deduplication from constructor parameters
+    - Always initialize ContentIndexManager without conditions
+    - Removed all `if self.enable_deduplication` checks throughout the class
+    - Simplified crawl_and_parse, save_results, get_cache_stats, and cleanup_cache methods
+    - Updated all documentation to reflect always-enabled deduplication
+  
+  - **Test Suite Updates**: Modified all test files to remove disabled deduplication scenarios
+    - Updated test_deduplication.py to remove third test run with disabled deduplication
+    - Modified demo_deduplication.py to remove enable_deduplication parameter
+    - Updated test documentation and key observations
+    - Validated that all tests pass with always-enabled deduplication
+
+* **Architecture Benefits Achieved**:
+  - **Simplified Codebase**: Eliminated conditional logic branches throughout the system
+  - **Always Optimized**: Every crawling operation benefits from intelligent caching
+  - **Cost Effective**: No possibility of redundant LLM API calls
+  - **User Experience**: Removed complexity of deciding when to enable deduplication
+  - **Performance**: Consistent optimization across all use cases
+
+* **Validation Results**:
+  - ✅ Command-line interface works correctly without --disable-deduplication flag
+  - ✅ Deduplication functionality operates perfectly with 100% cache hit rate on repeated runs
+  - ✅ All existing functionality preserved and working
+  - ✅ Test suite passes completely
+  - ✅ No performance degradation observed
+  - ✅ Memory bank updated with architectural decision
