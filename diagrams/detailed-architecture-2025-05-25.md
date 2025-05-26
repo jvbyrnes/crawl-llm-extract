@@ -52,6 +52,7 @@ classDiagram
         +DeepCrawler crawler
         +URLFilter url_filter
         +LLMParser parser
+        +ContentIndexManager content_index
         +__init__(crawler_config, llm_config, filter_llm_config, target_topic, filtering_enabled)
         +crawl_and_parse(url) List~Dict~
         +crawl_only(url) List~Dict~
@@ -59,6 +60,22 @@ classDiagram
         +set_target_topic(target_topic)
         +set_filter_llm_config(filter_llm_config)
         +save_results(results, output_dir)
+        +get_cache_stats() Dict
+        +cleanup_cache() int
+    }
+    
+    class ContentIndexManager {
+        +str base_dir
+        +str index_file
+        +dict url_index
+        +__init__(base_dir)
+        +should_process_with_llm(url, content) Tuple~bool, str~
+        +calculate_content_hash(content) str
+        +get_cached_extraction(url) Dict
+        +get_cached_metadata(url) Dict
+        +update_url_record(url, hash, extraction, metadata)
+        +get_cache_stats() Dict
+        +cleanup_stale_entries() int
     }
     
     class DeepCrawler {
@@ -106,6 +123,7 @@ classDiagram
     ApiDocCrawler --> DeepCrawler : orchestrates
     ApiDocCrawler --> URLFilter : orchestrates
     ApiDocCrawler --> LLMParser : orchestrates
+    ApiDocCrawler --> ContentIndexManager : uses (always enabled)
     
     DeepCrawler --> CrawlerConfig : configured by
     DeepCrawler --> AsyncWebCrawler : uses
@@ -115,6 +133,8 @@ classDiagram
     
     LLMParser --> LLMConfig : configured by
     LLMParser --> OpenAI_Client : uses (extraction)
+    
+    ContentIndexManager --> FileSystem : manages cache files
     
     %% Environment Variables
     class Environment {
@@ -142,6 +162,7 @@ sequenceDiagram
     participant AC as ApiDocCrawler
     participant DC as DeepCrawler
     participant UF as URLFilter
+    participant CIM as ContentIndexManager
     participant LP as LLMParser
     participant C4AI as crawl4ai
     participant FLLM as Filter LLM
@@ -151,6 +172,7 @@ sequenceDiagram
     %% Initialization Phase
     CLI->>AC: Initialize with configs + filtering_enabled
     AC->>DC: Create DeepCrawler
+    AC->>CIM: Create ContentIndexManager (always enabled)
     alt filtering_enabled AND target_topic
         AC->>UF: Create URLFilter
     else
@@ -178,18 +200,26 @@ sequenceDiagram
         AC->>AC: Keep all crawled pages (no filtering)
     end
     
-    %% Content Extraction Phase
+    %% Content Extraction Phase with Deduplication (Always Enabled)
     loop for each filtered page
-        AC->>LP: parse(html_content)
-        LP->>ELLM: chat.completions.create()
-        ELLM-->>LP: extracted_content
-        LP-->>AC: parsed_sections[]
+        AC->>CIM: should_process_with_llm(url, content)
+        alt content unchanged (cache hit)
+            CIM-->>AC: cached extraction + metadata
+            AC->>AC: Use cached result (no LLM call)
+        else content changed or new (cache miss)
+            CIM-->>AC: should process with LLM
+            AC->>LP: parse(html_content)
+            LP->>ELLM: chat.completions.create()
+            ELLM-->>LP: extracted_content
+            LP-->>AC: parsed_sections[]
+            AC->>CIM: update_url_record(url, hash, extraction, metadata)
+        end
     end
     
     %% Output Phase
     AC->>FS: save_results(results, output_dir)
-    AC->>FS: create index.html
-    AC-->>CLI: completion_status
+    AC->>FS: create index.json with cache metadata
+    AC-->>CLI: completion_status + deduplication stats
 ```
 
 ## LLM Integration Details
@@ -289,6 +319,13 @@ flowchart TD
 ```
 
 ## Key Technical Features
+
+### Always-Enabled Deduplication (2025-05-26)
+- **Simplified Architecture**: Removed `--disable-deduplication` option and `enable_deduplication` parameter
+- **Always Optimized**: Content-based deduplication using SHA-256 hashing always active
+- **Cost Reduction**: Eliminates redundant LLM processing for unchanged content automatically
+- **Performance**: Intelligent caching provides faster processing on repeated crawls
+- **User Experience**: No configuration needed - optimization happens transparently
 
 ### Filtering Opt-In Enhancement (2025-05-26)
 - **Explicit Control**: Filtering now requires both `--enable-filtering` flag and `--target-topic`

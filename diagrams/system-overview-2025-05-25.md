@@ -6,7 +6,7 @@
 ```mermaid
 flowchart TD
     %% User Interface Layer
-    CLI[Command Line Interface<br/>--url, --enable-filtering, --target-topic, --max-depth, etc.]
+    CLI[Command Line Interface<br/>--url, --enable-filtering, --target-topic, --max-depth, etc.<br/>Note: Deduplication always enabled]
     
     %% Core System Components
     subgraph "Core System"
@@ -14,6 +14,7 @@ flowchart TD
         CRAWLER[DeepCrawler<br/>🕷️ Web Crawling]
         FILTER[URLFilter<br/>🔍 Binary Filtering]
         PARSER[LLMParser<br/>📝 Content Extraction]
+        DEDUP[ContentIndexManager<br/>♻️ Deduplication (Always On)]
     end
     
     %% Configuration Layer
@@ -39,6 +40,7 @@ flowchart TD
     ORCH --> CRAWLER
     ORCH --> FILTER
     ORCH --> PARSER
+    ORCH --> DEDUP
     
     CRAWLER --> CRAWL4AI
     FILTER --> FILTER_LLM
@@ -65,6 +67,7 @@ flowchart TD
     subgraph "Key Features"
         DUAL[🔄 Dual-Model Architecture<br/>Separate models for filtering & extraction]
         BINARY[⚡ Binary Filtering<br/>Include/Exclude decisions]
+        DEDUP_FEAT[♻️ Always-On Deduplication<br/>Content-based caching & optimization]
         MODULAR[🧩 Modular Design<br/>Loosely coupled components]
         ASYNC[⚡ Async Processing<br/>Concurrent operations]
     end
@@ -76,11 +79,11 @@ flowchart TD
     classDef data fill:#fff3e0,stroke:#e65100,stroke-width:2px
     classDef feature fill:#fce4ec,stroke:#880e4f,stroke-width:2px
     
-    class ORCH,CRAWLER,FILTER,PARSER coreComponent
+    class ORCH,CRAWLER,FILTER,PARSER,DEDUP coreComponent
     class CC,LC,FC config
     class CRAWL4AI,FILTER_LLM,EXTRACT_LLM external
     class INPUT,CRAWL_RESULTS,FILTERED_RESULTS,PARSED_CONTENT,OUTPUT data
-    class DUAL,BINARY,MODULAR,ASYNC feature
+    class DUAL,BINARY,DEDUP_FEAT,MODULAR,ASYNC feature
 ```
 
 ## System Flow Summary
@@ -89,11 +92,13 @@ flowchart TD
 2. **Configuration**: System initializes crawler, LLM, and filter configurations (filter only if explicitly enabled)
 3. **Crawling**: DeepCrawler uses crawl4ai to discover and fetch pages
 4. **Binary Filtering** (opt-in): URLFilter uses fast LLM to make include/exclude decisions only when explicitly enabled
-5. **Content Extraction**: LLMParser uses premium LLM to extract structured content from all/filtered pages
-6. **Output**: Results saved to filesystem with metadata and explanations
+5. **Deduplication** (always on): ContentIndexManager checks content hashes to avoid redundant LLM processing
+6. **Content Extraction**: LLMParser uses premium LLM to extract structured content from new/changed pages only
+7. **Output**: Results saved to filesystem with metadata, explanations, and cache statistics
 
 ## Key Architectural Decisions
 
+- **Always-On Deduplication (2025-05-26)**: Removed `--disable-deduplication` option - content-based caching always enabled for cost and performance optimization
 - **Filtering Opt-In (2025-05-26)**: Filtering requires explicit enablement with both `--enable-filtering` and `--target-topic` flags
 - **Dual-Model LLM Architecture**: Separate optimized models for different tasks
 - **Binary Filtering**: Simplified from scoring to include/exclude decisions
